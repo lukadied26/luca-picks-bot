@@ -1,5 +1,7 @@
 import os
 import requests
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -8,6 +10,22 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+
+# --- FAKE WEB SERVER TO KEEP RENDER FREE TIER HAPPY ---
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Luca Picks Bot is alive!")
+
+def run_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+    server.serve_forever()
+
+# Start the dummy server in a background thread
+threading.Thread(target=run_server, daemon=True).start()
+# -----------------------------------------------------
 
 # Pull tokens directly from Render's Environment Variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -135,6 +153,6 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-    print("Luca Picks bot is running...")
+    print("Luca Picks bot is running with dummy web server...")
     app.run_polling()
-  
+    
